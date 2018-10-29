@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <math.h>
 #include "MyShader.h"
+#include "stb_image.h"
 // 注意 glad的引用一定要在GLFW之前
 using namespace std;
 
@@ -14,6 +15,7 @@ void framebuffer_size_callback(GLFWwindow *window, int width, int height);
 void makeTriangle(unsigned int VAO);
 void makeRectangle(unsigned int VAO);
 void processInput(GLFWwindow *window);
+void readTex(unsigned int texture, const char* texturePath);
 
 int main()
 {
@@ -48,6 +50,17 @@ int main()
     glGenVertexArrays(1, &VAORect);
     makeRectangle(VAORect);
 
+    // 创建纹理
+    unsigned int texture1, texture2;
+    glGenTextures(1, &texture1);
+    glGenTextures(1, &texture2);
+    readTex(texture1, "../src/tex/container.jpg");
+    readTex(texture2, "../src/tex/awesomeface.png");
+
+    myShader.use(); // 别忘记在激活着色器前先设置uniform！
+    glUniform1i(glGetUniformLocation(myShader.ID, "Texture1"), 0); // 手动设置
+    // myShader.setInt("Texture2", 1); // 或者使用着色器类设置
+
     // 准备引擎
     // 循环不停的渲染，及渲染循环
     while(!glfwWindowShouldClose(window)){
@@ -62,11 +75,16 @@ int main()
         // 应用着色器程序
         myShader.use();
         // 绘制三角形
-        glBindVertexArray(VAO);
-        glDrawArrays(GL_TRIANGLES, 0, 6);
+        // glBindVertexArray(VAO);
+        // glDrawArrays(GL_TRIANGLES, 0, 6);
+        // 绑定纹理
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, texture1);
+        // glActiveTexture(GL_TEXTURE1);
+        // glBindTexture(GL_TEXTURE_2D, texture2);
         // 通过EBO来绘制矩形
-        // glBindVertexArray(VAORect);
-        // glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+        glBindVertexArray(VAORect);
+        glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
         glBindVertexArray(0);
 
         // 应用程序采用着双缓冲模式，一张在前面显示，一张在后面慢慢加载
@@ -149,10 +167,11 @@ void makeRectangle(unsigned int VAO){
     glBindVertexArray(VAO);
     // 绑定VBO
     float vertices[] = {
-        0.5f, 0.5f, 0.0f,   // 右上角
-        0.5f, -0.5f, 0.0f,  // 右下角
-        -0.5f, -0.5f, 0.0f, // 左下角
-        -0.5f, 0.5f, 0.0f   // 左上角
+    //     ---- 位置 ----       ---- 颜色 ----     - 纹理坐标 -
+         0.5f,  0.5f, 0.0f,   1.0f, 0.0f, 0.0f,   1.0f, 1.0f,   // 右上
+         0.5f, -0.5f, 0.0f,   0.0f, 1.0f, 0.0f,   1.0f, 0.0f,   // 右下
+        -0.5f, -0.5f, 0.0f,   0.0f, 0.0f, 1.0f,   0.0f, 0.0f,   // 左下
+        -0.5f,  0.5f, 0.0f,   1.0f, 1.0f, 0.0f,   0.0f, 1.0f    // 左上
     };
     unsigned int VBO;
     glGenBuffers(1, &VBO);
@@ -168,8 +187,12 @@ void makeRectangle(unsigned int VAO){
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
     // 设置定点属性指针
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void *)0);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void *)0);
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void *)(3 * sizeof(float)));
+    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void *)(6 * sizeof(float)));
     glEnableVertexAttribArray(0);
+    glEnableVertexAttribArray(1);
+    glEnableVertexAttribArray(2);
     // 解绑
     glBindVertexArray(0);
 }
@@ -177,4 +200,24 @@ void makeRectangle(unsigned int VAO){
 void processInput(GLFWwindow *window){
     if(glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
         glfwSetWindowShouldClose(window, true);
+}
+
+void readTex(unsigned int texture, const char* texturePath){
+    glBindTexture(GL_TEXTURE_2D, texture);
+    // 为当前绑定的纹理对象设置环绕、过滤方式
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);   
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    // 加载并生成纹理
+    stbi_set_flip_vertically_on_load(true);
+    int width, height, nrChannels;
+    unsigned char *data = stbi_load(texturePath, &width, &height, &nrChannels, 0);
+    if (data){
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
+        glGenerateMipmap(GL_TEXTURE_2D);
+    }else{
+        std::cout << "Failed to load texture" << std::endl;
+    }
+    stbi_image_free(data);
 }
