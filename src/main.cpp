@@ -9,13 +9,16 @@
 // 注意 glad的引用一定要在GLFW之前
 using namespace std;
 
+#define JPG 1
+#define PNG 2
+
 void initializeGLFW();
 int initializeGLAD();
 void framebuffer_size_callback(GLFWwindow *window, int width, int height);
 void makeTriangle(unsigned int VAO);
 void makeRectangle(unsigned int VAO);
 void processInput(GLFWwindow *window);
-void readTex(unsigned int texture, const char* texturePath);
+void readTex(unsigned int texture, const char* texturePath, unsigned int type);
 
 int main()
 {
@@ -54,12 +57,12 @@ int main()
     unsigned int texture1, texture2;
     glGenTextures(1, &texture1);
     glGenTextures(1, &texture2);
-    readTex(texture1, "../src/tex/container.jpg");
-    readTex(texture2, "../src/tex/awesomeface.png");
+    readTex(texture1, "../src/tex/container.jpg", JPG);
+    readTex(texture2, "../src/tex/awesomeface.png", PNG);
 
     myShader.use(); // 别忘记在激活着色器前先设置uniform！
     glUniform1i(glGetUniformLocation(myShader.ID, "Texture1"), 0); // 手动设置
-    // myShader.setInt("Texture2", 1); // 或者使用着色器类设置
+    myShader.setInt("Texture2", 1); // 或者使用着色器类设置
 
     // 准备引擎
     // 循环不停的渲染，及渲染循环
@@ -80,8 +83,8 @@ int main()
         // 绑定纹理
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, texture1);
-        // glActiveTexture(GL_TEXTURE1);
-        // glBindTexture(GL_TEXTURE_2D, texture2);
+        glActiveTexture(GL_TEXTURE1);
+        glBindTexture(GL_TEXTURE_2D, texture2);
         // 通过EBO来绘制矩形
         glBindVertexArray(VAORect);
         glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
@@ -202,7 +205,7 @@ void processInput(GLFWwindow *window){
         glfwSetWindowShouldClose(window, true);
 }
 
-void readTex(unsigned int texture, const char* texturePath){
+void readTex(unsigned int texture, const char* texturePath, unsigned int type){
     glBindTexture(GL_TEXTURE_2D, texture);
     // 为当前绑定的纹理对象设置环绕、过滤方式
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);   
@@ -214,7 +217,13 @@ void readTex(unsigned int texture, const char* texturePath){
     int width, height, nrChannels;
     unsigned char *data = stbi_load(texturePath, &width, &height, &nrChannels, 0);
     if (data){
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
+        switch(type){
+            case JPG:
+                glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
+                break;
+            case PNG:
+                glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
+        }
         glGenerateMipmap(GL_TEXTURE_2D);
     }else{
         std::cout << "Failed to load texture" << std::endl;
