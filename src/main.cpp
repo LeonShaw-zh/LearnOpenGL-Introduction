@@ -12,6 +12,8 @@ using namespace std;
 #define JPG 1
 #define PNG 2
 
+float mixValue = 0.0f ;
+
 void initializeGLFW();
 int initializeGLAD();
 void framebuffer_size_callback(GLFWwindow *window, int width, int height);
@@ -59,7 +61,6 @@ int main()
     glGenTextures(1, &texture2);
     readTex(texture1, "../src/tex/container.jpg", JPG);
     readTex(texture2, "../src/tex/awesomeface.png", PNG);
-
     myShader.use(); // 别忘记在激活着色器前先设置uniform！
     glUniform1i(glGetUniformLocation(myShader.ID, "Texture1"), 0); // 手动设置
     myShader.setInt("Texture2", 1); // 或者使用着色器类设置
@@ -77,14 +78,13 @@ int main()
 
         // 应用着色器程序
         myShader.use();
-        // 绘制三角形
-        // glBindVertexArray(VAO);
-        // glDrawArrays(GL_TRIANGLES, 0, 6);
         // 绑定纹理
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, texture1);
         glActiveTexture(GL_TEXTURE1);
         glBindTexture(GL_TEXTURE_2D, texture2);
+        // 监控键盘设置
+        myShader.setFloat("mixValue", mixValue);
         // 通过EBO来绘制矩形
         glBindVertexArray(VAORect);
         glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
@@ -171,10 +171,10 @@ void makeRectangle(unsigned int VAO){
     // 绑定VBO
     float vertices[] = {
     //     ---- 位置 ----       ---- 颜色 ----     - 纹理坐标 -
-         0.5f,  0.5f, 0.0f,   1.0f, 0.0f, 0.0f,   1.0f, 1.0f,   // 右上
-         0.5f, -0.5f, 0.0f,   0.0f, 1.0f, 0.0f,   1.0f, 0.0f,   // 右下
+         0.5f,  0.5f, 0.0f,   1.0f, 0.0f, 0.0f,   2.0f, 2.0f,   // 右上
+         0.5f, -0.5f, 0.0f,   0.0f, 1.0f, 0.0f,   2.0f, 0.0f,   // 右下
         -0.5f, -0.5f, 0.0f,   0.0f, 0.0f, 1.0f,   0.0f, 0.0f,   // 左下
-        -0.5f,  0.5f, 0.0f,   1.0f, 1.0f, 0.0f,   0.0f, 1.0f    // 左上
+        -0.5f,  0.5f, 0.0f,   1.0f, 1.0f, 0.0f,   0.0f, 2.0f    // 左上
     };
     unsigned int VBO;
     glGenBuffers(1, &VBO);
@@ -203,12 +203,22 @@ void makeRectangle(unsigned int VAO){
 void processInput(GLFWwindow *window){
     if(glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
         glfwSetWindowShouldClose(window, true);
+    if(glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS){
+        mixValue += 0.01f;
+        if(mixValue > 1.0f)
+            mixValue = 1.0f;
+    }
+    if(glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS){
+        mixValue -= 0.01f;
+        if(mixValue < 0.0f)
+            mixValue = 0.0f;
+    }
 }
 
 void readTex(unsigned int texture, const char* texturePath, unsigned int type){
     glBindTexture(GL_TEXTURE_2D, texture);
     // 为当前绑定的纹理对象设置环绕、过滤方式
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);   
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_MIRRORED_REPEAT);   
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
