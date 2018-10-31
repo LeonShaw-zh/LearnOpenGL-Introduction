@@ -82,10 +82,11 @@ int main()
 
         // 应用着色器程序
         myShader.use();
+
         // 创建转换矩阵，一般按照缩放，旋转，位移的顺序来来进行变换，一定要想好转换的顺序。
         glm::mat4 trans = glm::mat4(1.0f);
-        trans = glm::rotate(trans, (float)glfwGetTime(), glm::vec3(0.0, 0.0, 1.0));
         trans = glm::translate(trans, glm::vec3(0.5, -0.5, 0.0));
+        trans = glm::rotate(trans, (float)glfwGetTime(), glm::vec3(0.0, 0.0, 1.0));
         trans = glm::scale(trans, glm::vec3(0.5, 0.5, 0.5));
         // 传递转换矩阵
         glUniformMatrix4fv(glGetUniformLocation(myShader.ID, "transform"), 1, GL_FALSE, glm::value_ptr(trans));
@@ -97,6 +98,15 @@ int main()
         // 监控键盘设置
         myShader.setFloat("mixValue", mixValue);
         // 通过EBO来绘制矩形
+        glBindVertexArray(VAORect);
+        glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+        glBindVertexArray(0);
+
+        // 画第二个矩形
+        trans = glm::mat4(1.0f);
+        trans = glm::translate(trans, glm::vec3(-0.5, 0.5, 0.0));
+        trans = glm::scale(trans, (float)(sin(glfwGetTime())*0.5 + 0.5) * glm::vec3(1.0, 1.0, 1.0));
+        glUniformMatrix4fv(glGetUniformLocation(myShader.ID, "transform"), 1, GL_FALSE, glm::value_ptr(trans));
         glBindVertexArray(VAORect);
         glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
         glBindVertexArray(0);
