@@ -1,11 +1,15 @@
-#define GLFW_DLL
-#include <glad/glad.h>
-#include <GLFW/glfw3.h>
 #include <iostream>
 #include <stdlib.h>
 #include <math.h>
-#include "MyShader.h"
+#define GLFW_DLL
+#include <glad/glad.h>
+#include <GLFW/glfw3.h>
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
 #include "stb_image.h"
+#include "MyShader.h"
+
 // 注意 glad的引用一定要在GLFW之前
 using namespace std;
 
@@ -78,6 +82,13 @@ int main()
 
         // 应用着色器程序
         myShader.use();
+        // 创建转换矩阵，一般按照缩放，旋转，位移的顺序来来进行变换，一定要想好转换的顺序。
+        glm::mat4 trans = glm::mat4(1.0f);
+        trans = glm::rotate(trans, (float)glfwGetTime(), glm::vec3(0.0, 0.0, 1.0));
+        trans = glm::translate(trans, glm::vec3(0.5, -0.5, 0.0));
+        trans = glm::scale(trans, glm::vec3(0.5, 0.5, 0.5));
+        // 传递转换矩阵
+        glUniformMatrix4fv(glGetUniformLocation(myShader.ID, "transform"), 1, GL_FALSE, glm::value_ptr(trans));
         // 绑定纹理
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, texture1);
