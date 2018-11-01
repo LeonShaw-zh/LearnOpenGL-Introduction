@@ -17,12 +17,27 @@ using namespace std;
 #define PNG 2
 
 float mixValue = 0.0f ;
+unsigned int screenWidth = 800;
+unsigned int screenHeight = 600;
+glm::vec3 cubePositions[] = {
+    glm::vec3( 0.0f,  0.0f,  0.0f), 
+    glm::vec3( 2.0f,  5.0f, -15.0f), 
+    glm::vec3(-1.5f, -2.2f, -2.5f),  
+    glm::vec3(-3.8f, -2.0f, -12.3f),  
+    glm::vec3( 2.4f, -0.4f, -3.5f),  
+    glm::vec3(-1.7f,  3.0f, -7.5f),  
+    glm::vec3( 1.3f, -2.0f, -2.5f),  
+    glm::vec3( 1.5f,  2.0f, -2.5f), 
+    glm::vec3( 1.5f,  0.2f, -1.5f), 
+    glm::vec3(-1.3f,  1.0f, -1.5f)  
+};
 
 void initializeGLFW();
 int initializeGLAD();
 void framebuffer_size_callback(GLFWwindow *window, int width, int height);
 void makeTriangle(unsigned int VAO);
 void makeRectangle(unsigned int VAO);
+void makeCube(unsigned int VAO);
 void processInput(GLFWwindow *window);
 void readTex(unsigned int texture, const char* texturePath, unsigned int type);
 
@@ -31,7 +46,7 @@ int main()
     // 初始化GLFW
     initializeGLFW();
     // 创建一个窗口，将窗口的上下文应用到当前的主上下文
-    GLFWwindow* window = glfwCreateWindow(800, 600, "LearnOpenGL", NULL, NULL);
+    GLFWwindow* window = glfwCreateWindow(screenWidth, screenHeight, "LearnOpenGL", NULL, NULL);
     if (window == NULL){
         cout << "Failed to create GLFW window" << endl;
         glfwTerminate();
@@ -58,6 +73,10 @@ int main()
     unsigned int VAORect;
     glGenVertexArrays(1, &VAORect);
     makeRectangle(VAORect);
+    // 创建一个立方体
+    unsigned int VAOCube;
+    glGenVertexArrays(1, &VAOCube);
+    makeCube(VAOCube);
 
     // 创建纹理
     unsigned int texture1, texture2;
@@ -69,6 +88,9 @@ int main()
     glUniform1i(glGetUniformLocation(myShader.ID, "Texture1"), 0); // 手动设置
     myShader.setInt("Texture2", 1); // 或者使用着色器类设置
 
+    // 开启深度测试
+    glEnable(GL_DEPTH_TEST);
+
     // 准备引擎
     // 循环不停的渲染，及渲染循环
     while(!glfwWindowShouldClose(window)){
@@ -79,36 +101,38 @@ int main()
         // 清空屏幕
         glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT);
+        // 清空z缓冲
+        glClear(GL_DEPTH_BUFFER_BIT);
 
         // 应用着色器程序
         myShader.use();
 
-        // 创建转换矩阵，一般按照缩放，旋转，位移的顺序来来进行变换，一定要想好转换的顺序。
-        glm::mat4 trans = glm::mat4(1.0f);
-        trans = glm::translate(trans, glm::vec3(0.5, -0.5, 0.0));
-        trans = glm::rotate(trans, (float)glfwGetTime(), glm::vec3(0.0, 0.0, 1.0));
-        trans = glm::scale(trans, glm::vec3(0.5, 0.5, 0.5));
-        // 传递转换矩阵
-        glUniformMatrix4fv(glGetUniformLocation(myShader.ID, "transform"), 1, GL_FALSE, glm::value_ptr(trans));
-        // 绑定纹理
+        // 片段着色器需要的参数
+        //      绑定纹理和纹理混合值
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, texture1);
         glActiveTexture(GL_TEXTURE1);
         glBindTexture(GL_TEXTURE_2D, texture2);
-        // 监控键盘设置
         myShader.setFloat("mixValue", mixValue);
-        // 通过EBO来绘制矩形
-        glBindVertexArray(VAORect);
-        glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
-        glBindVertexArray(0);
 
-        // 画第二个矩形
-        trans = glm::mat4(1.0f);
-        trans = glm::translate(trans, glm::vec3(-0.5, 0.5, 0.0));
-        trans = glm::scale(trans, (float)(sin(glfwGetTime())*0.5 + 0.5) * glm::vec3(1.0, 1.0, 1.0));
-        glUniformMatrix4fv(glGetUniformLocation(myShader.ID, "transform"), 1, GL_FALSE, glm::value_ptr(trans));
-        glBindVertexArray(VAORect);
-        glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+        // 顶点着色器需要的参数
+        //      观察矩阵
+        glm::mat4 view = glm::mat4(1.0f);
+        view = glm::translate(view, glm::vec3(0.0f, 0.0f, -3.0f));
+        glUniformMatrix4fv(glGetUniformLocation(myShader.ID, "view"), 1, GL_FALSE, glm::value_ptr(view));
+        //      投影矩阵
+        glm::mat4 projection = glm::perspective(glm::radians(45.0f), (float)screenWidth / screenHeight, 0.1f, 100.0f);
+        glUniformMatrix4fv(glGetUniformLocation(myShader.ID, "projection"), 1, GL_FALSE, glm::value_ptr(projection));
+        // 绘制立方体
+        glBindVertexArray(VAOCube);
+        for(int i=0; i<10; i++){
+            // 模型矩阵 先旋转再位移
+            glm::mat4 model = glm::mat4(1.0f);
+            model = glm::translate(model, cubePositions[i]);
+            model = glm::rotate(model, (float)glfwGetTime() * glm::radians(20.0f * i), glm::vec3(0.5f, 1.0f, 0.0f));
+            glUniformMatrix4fv(glGetUniformLocation(myShader.ID, "model"), 1, GL_FALSE, glm::value_ptr(model));
+            glDrawArrays(GL_TRIANGLES, 0, 36);
+        }
         glBindVertexArray(0);
 
         // 应用程序采用着双缓冲模式，一张在前面显示，一张在后面慢慢加载
@@ -218,6 +242,62 @@ void makeRectangle(unsigned int VAO){
     glEnableVertexAttribArray(1);
     glEnableVertexAttribArray(2);
     // 解绑
+    glBindVertexArray(0);
+}
+
+void makeCube(unsigned int VAO){
+    glBindVertexArray(VAO);
+    float vertices[] = {
+        -0.5f, -0.5f, -0.5f,  0.0f, 0.0f,
+         0.5f, -0.5f, -0.5f,  1.0f, 0.0f,
+         0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
+         0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
+        -0.5f,  0.5f, -0.5f,  0.0f, 1.0f,
+        -0.5f, -0.5f, -0.5f,  0.0f, 0.0f,
+
+        -0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
+         0.5f, -0.5f,  0.5f,  1.0f, 0.0f,
+         0.5f,  0.5f,  0.5f,  1.0f, 1.0f,
+         0.5f,  0.5f,  0.5f,  1.0f, 1.0f,
+        -0.5f,  0.5f,  0.5f,  0.0f, 1.0f,
+        -0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
+
+        -0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+        -0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
+        -0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
+        -0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
+        -0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
+        -0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+
+         0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+         0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
+         0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
+          0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
+         0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
+         0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+
+        -0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
+         0.5f, -0.5f, -0.5f,  1.0f, 1.0f,
+         0.5f, -0.5f,  0.5f,  1.0f, 0.0f,
+         0.5f, -0.5f,  0.5f,  1.0f, 0.0f,
+        -0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
+        -0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
+
+        -0.5f,  0.5f, -0.5f,  0.0f, 1.0f,
+         0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
+         0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+         0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+        -0.5f,  0.5f,  0.5f,  0.0f, 0.0f,
+        -0.5f,  0.5f, -0.5f,  0.0f, 1.0f
+    };
+    unsigned int VBO;
+    glGenBuffers(1, &VBO);
+    glBindBuffer(GL_ARRAY_BUFFER, VBO);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)0);
+    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
+    glEnableVertexAttribArray(0);
+    glEnableVertexAttribArray(2);
     glBindVertexArray(0);
 }
 
