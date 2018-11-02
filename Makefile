@@ -38,19 +38,20 @@ default: all
 OPENGL_PATH := openGL
 OPENGL_INCLUD := $(OPENGL_PATH)/include
 OPENGL_LIBS := $(OPENGL_PATH)/libs
+LINKLIBS := -lstbimage -lglfw3dll -lglfw3 -lglad
 
 # non-phony targets
 $(TARGET): $(OBJ)
-	$(CC) $(TARFLAG) $(CCFLAG) -o $@ $? -I$(OPENGL_INCLUD) -L$(OPENGL_LIBS) -lglad -lglfw3 -lglfw3dll
+	$(CC) $(TARFLAG) $(CCFLAG) -o $@ $? -I$(OPENGL_INCLUD) -L$(OPENGL_LIBS) $(LINKLIBS)
 
 $(OBJ_PATH)/%.o: $(SRC_PATH)/%.c*
-	$(CC) $(TARFLAG) $(CCOBJFLAG) -o $@ $< -I$(OPENGL_INCLUD) -L$(OPENGL_LIBS) -lglad -lglfw3 -lglfw3dll
+	$(CC) $(TARFLAG) $(CCOBJFLAG) -o $@ $< -I$(OPENGL_INCLUD)
 
 $(DBG_PATH)/%.o: $(SRC_PATH)/%.c*
-	$(CC) $(TARFLAG) $(CCOBJFLAG) $(DBGFLAG) -o $@ $< -I$(OPENGL_INCLUD) -L$(OPENGL_LIBS) -lglad -lglfw3 -lglfw3dll
+	$(CC) $(TARFLAG) $(CCOBJFLAG) $(DBGFLAG) -o $@ $< -I$(OPENGL_INCLUD)
 
 $(TARGET_DEBUG): $(OBJ_DEBUG)
-	$(CC) $(TARFLAG) $(CCFLAG) $(DBGFLAG) $? -o $@ -I$(OPENGL_INCLUD) -L$(OPENGL_LIBS) -lglad -lglfw3 -lglfw3dll
+	$(CC) $(TARFLAG) $(CCFLAG) $(DBGFLAG) $? -o $@ -I$(OPENGL_INCLUD) -L$(OPENGL_LIBS) $(LINKLIBS)
 
 # phony rules
 .PHONY: all

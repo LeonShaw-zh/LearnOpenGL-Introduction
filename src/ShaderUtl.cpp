@@ -1,6 +1,6 @@
-#include "MyShader.h"
+#include "ShaderUtl.h"
 
-MyShader::MyShader(const char* vertexPath, const char* fragmentPath){
+ShaderUtl::ShaderUtl(const char* vertexPath, const char* fragmentPath){
     // 1. 从文件路径中获取顶点/片段着色器
     std::string vertexCode;
     std::string fragmentCode;
@@ -67,7 +67,7 @@ MyShader::MyShader(const char* vertexPath, const char* fragmentPath){
     glGetProgramiv(ID, GL_LINK_STATUS, &success);
     if(!success){
         glGetProgramInfoLog(ID, 512, NULL, infoLog);
-        std::cout << "ERROR::SHADER::PROGRAM::LINKING_FAILED\n" << infoLog << std::endl;
+        std::cout << "ERROR::Shader::PROGRAM::LINKING_FAILED\n" << infoLog << std::endl;
     }
 
     // 删除着色器，它们已经链接到我们的程序中了，已经不再需要了
@@ -75,21 +75,21 @@ MyShader::MyShader(const char* vertexPath, const char* fragmentPath){
     glDeleteShader(fragment);
 }
 
-void MyShader::use(){
+void ShaderUtl::use(){
     glUseProgram(ID);
 }
 
-void MyShader::setBool(const std::string &name, bool value) const
+void ShaderUtl::setBool(const std::string &name, bool value) const
 {
     glUniform1i(glGetUniformLocation(ID, name.c_str()), (int)value); 
 }
 
-void MyShader::setInt(const std::string &name, int value) const
+void ShaderUtl::setInt(const std::string &name, int value) const
 { 
     glUniform1i(glGetUniformLocation(ID, name.c_str()), value); 
 }
 
-void MyShader::setFloat(const std::string &name, float value) const
+void ShaderUtl::setFloat(const std::string &name, float value) const
 { 
     glUniform1f(glGetUniformLocation(ID, name.c_str()), value); 
 } 

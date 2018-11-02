@@ -1,5 +1,5 @@
-#ifndef MYSHADER_H
-#define MYSHADER_H
+#ifndef SHADERUTL_H
+#define SHADERUTL_H
 
 #include <glad/glad.h>
 
@@ -8,11 +8,11 @@
 #include <sstream>
 #include <iostream>
 
-class MyShader{
+class ShaderUtl{
 public:
     unsigned int ID;
 
-    MyShader(const GLchar* vertexPath, const GLchar* fragmentPath);
+    ShaderUtl(const GLchar* vertexPath, const GLchar* fragmentPath);
     void use();
     void setBool(const std::string &name, bool valer) const;
     void setInt(const std::string &name, int value) const;

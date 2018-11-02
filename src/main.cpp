@@ -8,7 +8,7 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include "stb_image.h"
-#include "MyShader.h"
+#include "ShaderUtl.h"
 
 // 注意 glad的引用一定要在GLFW之前
 using namespace std;
@@ -63,7 +63,7 @@ int main()
     glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
 
     // 创建和编译我的着色器
-    MyShader myShader("../src/shader/shader.vs", "../src/shader/shader.fs");
+    ShaderUtl myShader("../src/shader/shader.vs", "../src/shader/shader.fs");
 
     // 创建一个三角形的Vertex Array Object
     unsigned int VAO;
