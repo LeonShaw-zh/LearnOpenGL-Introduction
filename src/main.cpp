@@ -16,6 +16,7 @@ using namespace std;
 #define JPG 1
 #define PNG 2
 
+GLFWwindow* window;
 float mixValue = 0.0f ;
 unsigned int screenWidth = 800;
 unsigned int screenHeight = 600;
@@ -31,40 +32,48 @@ glm::vec3 cubePositions[] = {
     glm::vec3( 1.5f,  0.2f, -1.5f), 
     glm::vec3(-1.3f,  1.0f, -1.5f)  
 };
+// 创建摄像机
+glm::vec3 cameraPos   = glm::vec3(0.0f, 0.0f,  3.0f);
+glm::vec3 cameraFront = glm::vec3(0.0f, 0.0f, -1.0f);
+glm::vec3 cameraUp    = glm::vec3(0.0f, 1.0f,  0.0f);
+float deltaTime = 0.0f; // 当前帧与上一帧的时间差
+float lastFrame = 0.0f; // 上一帧的时间
+// 鼠标相关
+float lastX = 400, lastY = 300;
+float sensitivity = 0.05f;
+float yaw = -90.0f, pitch = 0.0f;
+bool firstMouse = true;
+// 滚轮相关
+float fov = 45.0f;
 
-void initializeGLFW();
+int initialize();
+int initializeGLFW();
 int initializeGLAD();
-void framebuffer_size_callback(GLFWwindow *window, int width, int height);
 void makeTriangle(unsigned int VAO);
 void makeRectangle(unsigned int VAO);
 void makeCube(unsigned int VAO);
-void processInput(GLFWwindow *window);
 void readTex(unsigned int texture, const char* texturePath, unsigned int type);
+void framebuffer_size_callback(GLFWwindow *window, int width, int height);
+void mouse_callback(GLFWwindow* window, double xpos, double ypos);
+void scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
+void processInput(GLFWwindow *window);
 
 int main()
 {
-    // 初始化GLFW
-    initializeGLFW();
-    // 创建一个窗口，将窗口的上下文应用到当前的主上下文
-    GLFWwindow* window = glfwCreateWindow(screenWidth, screenHeight, "LearnOpenGL", NULL, NULL);
-    if (window == NULL){
-        cout << "Failed to create GLFW window" << endl;
-        glfwTerminate();
-        return -1;
-    }   
-    glfwMakeContextCurrent(window);
-    // 初始化GLAD
-    if(!initializeGLAD())
+    if(!initialize())
         return -1;
 
     // 初始化渲染窗口，及视口ViewPort
     glViewport(0, 0, 800, 600);
     // 绑定回调函数
     glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
+    // 开启扑捉光标
+    glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+    glfwSetCursorPosCallback(window, mouse_callback);
+    glfwSetScrollCallback(window, scroll_callback);
 
     // 创建和编译我的着色器
     ShaderUtl myShader("../src/shader/shader.vs", "../src/shader/shader.fs");
-
     // 创建一个三角形的Vertex Array Object
     unsigned int VAO;
     glGenVertexArrays(1, &VAO);
@@ -77,7 +86,6 @@ int main()
     unsigned int VAOCube;
     glGenVertexArrays(1, &VAOCube);
     makeCube(VAOCube);
-
     // 创建纹理
     unsigned int texture1, texture2;
     glGenTextures(1, &texture1);
@@ -94,7 +102,6 @@ int main()
     // 准备引擎
     // 循环不停的渲染，及渲染循环
     while(!glfwWindowShouldClose(window)){
-        // 检查用户的输入
         processInput(window);
         // 检查触发事件
         glfwPollEvents();
@@ -117,11 +124,10 @@ int main()
 
         // 顶点着色器需要的参数
         //      观察矩阵
-        glm::mat4 view = glm::mat4(1.0f);
-        view = glm::translate(view, glm::vec3(0.0f, 0.0f, -3.0f));
+        glm::mat4 view = glm::lookAt(cameraPos, cameraPos + cameraFront, cameraUp);
         glUniformMatrix4fv(glGetUniformLocation(myShader.ID, "view"), 1, GL_FALSE, glm::value_ptr(view));
         //      投影矩阵
-        glm::mat4 projection = glm::perspective(glm::radians(45.0f), (float)screenWidth / screenHeight, 0.1f, 100.0f);
+        glm::mat4 projection = glm::perspective(glm::radians(fov), (float)screenWidth / screenHeight, 0.1f, 100.0f);
         glUniformMatrix4fv(glGetUniformLocation(myShader.ID, "projection"), 1, GL_FALSE, glm::value_ptr(projection));
         // 绘制立方体
         glBindVertexArray(VAOCube);
@@ -146,13 +152,32 @@ int main()
     return 0;
 }
 
-void initializeGLFW(){
+int initialize(){
+    // 初始化GLFW
+    if(!initializeGLFW())
+        return 0;
+    // 初始化GLAD
+    if(!initializeGLAD())
+        return 0;
+    return 1;
+}
+
+int initializeGLFW(){
     // 初始GLFW，设置版本号为3.3，使用核心模式
     glfwInit();
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
     // glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
+    // 创建一个窗口，将窗口的上下文应用到当前的主上下文
+    window = glfwCreateWindow(screenWidth, screenHeight, "LearnOpenGL", NULL, NULL);
+    if (window == NULL){
+        cout << "Failed to create GLFW window" << endl;
+        glfwTerminate();
+        return 0;
+    }   
+    glfwMakeContextCurrent(window);
+    return 1;
 }
 
 int initializeGLAD(){
@@ -301,21 +326,6 @@ void makeCube(unsigned int VAO){
     glBindVertexArray(0);
 }
 
-void processInput(GLFWwindow *window){
-    if(glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
-        glfwSetWindowShouldClose(window, true);
-    if(glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS){
-        mixValue += 0.01f;
-        if(mixValue > 1.0f)
-            mixValue = 1.0f;
-    }
-    if(glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS){
-        mixValue -= 0.01f;
-        if(mixValue < 0.0f)
-            mixValue = 0.0f;
-    }
-}
-
 void readTex(unsigned int texture, const char* texturePath, unsigned int type){
     glBindTexture(GL_TEXTURE_2D, texture);
     // 为当前绑定的纹理对象设置环绕、过滤方式
@@ -340,4 +350,72 @@ void readTex(unsigned int texture, const char* texturePath, unsigned int type){
         std::cout << "Failed to load texture" << std::endl;
     }
     stbi_image_free(data);
+}
+
+void processInput(GLFWwindow *window){
+    if(glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
+        glfwSetWindowShouldClose(window, true);
+    if(glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS){
+        mixValue += 0.01f;
+        if(mixValue > 1.0f)
+            mixValue = 1.0f;
+    }
+    if(glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS){
+        mixValue -= 0.01f;
+        if(mixValue < 0.0f)
+            mixValue = 0.0f;
+    }
+    // 获得渲染时间，保证速度相同
+    float currentFrame = glfwGetTime();
+    deltaTime = currentFrame - lastFrame;
+    lastFrame = currentFrame;
+    float cameraSpeed = 2.5f * deltaTime; // adjust accordingly
+    // 键盘移动
+    if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
+        cameraPos += cameraSpeed * cameraFront;
+    if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
+        cameraPos -= cameraSpeed * cameraFront;
+    if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
+        cameraPos -= glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed;
+    if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
+        cameraPos += glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed;    
+}
+
+void mouse_callback(GLFWwindow* window, double xpos, double ypos){
+    if(firstMouse){
+        lastX = xpos;
+        lastY = ypos;
+        firstMouse = false;
+    }
+
+    float xoffset = xpos - lastX;
+    float yoffset = lastY - ypos; // y的坐标是上面小，下面大
+    lastX = xpos;
+    lastY = ypos;
+
+    xoffset *= sensitivity;
+    yoffset *= sensitivity;
+    
+    yaw += xoffset;
+    pitch += yoffset;
+
+    if(pitch > 89.0)
+        pitch = 89.0;
+    if(pitch < -89.0)
+        pitch = -89.0;
+    
+    glm::vec3 front;
+    front.x = cos(glm::radians(pitch)) * cos(glm::radians(yaw));
+    front.y = sin(glm::radians(pitch));
+    front.z = cos(glm::radians(pitch)) * sin(glm::radians(yaw));
+    cameraFront = glm::normalize(front);
+}
+
+void scroll_callback(GLFWwindow* window, double xoffset, double yoffset){
+  if(fov >= 1.0f && fov <= 45.0f)
+    fov -= yoffset;
+  if(fov <= 1.0f)
+    fov = 1.0f;
+  if(fov >= 45.0f)
+    fov = 45.0f;
 }
