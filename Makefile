@@ -42,7 +42,7 @@ LINKLIBS := -lstbimage -lglfw3dll -lglfw3 -lglad
 
 # non-phony targets
 $(TARGET): $(OBJ)
-	$(CC) $(TARFLAG) $(CCFLAG) -o $@ $? -I$(OPENGL_INCLUD) -L$(OPENGL_LIBS) $(LINKLIBS)
+	$(CC) $(TARFLAG) $(CCFLAG) -o $@ $(OBJ) -I$(OPENGL_INCLUD) -L$(OPENGL_LIBS) $(LINKLIBS)
 
 $(OBJ_PATH)/%.o: $(SRC_PATH)/%.c*
 	$(CC) $(TARFLAG) $(CCOBJFLAG) -o $@ $< -I$(OPENGL_INCLUD)
@@ -51,7 +51,7 @@ $(DBG_PATH)/%.o: $(SRC_PATH)/%.c*
 	$(CC) $(TARFLAG) $(CCOBJFLAG) $(DBGFLAG) -o $@ $< -I$(OPENGL_INCLUD)
 
 $(TARGET_DEBUG): $(OBJ_DEBUG)
-	$(CC) $(TARFLAG) $(CCFLAG) $(DBGFLAG) $? -o $@ -I$(OPENGL_INCLUD) -L$(OPENGL_LIBS) $(LINKLIBS)
+	$(CC) $(TARFLAG) $(CCFLAG) $(DBGFLAG) $(OBJ_DEBUG) -o $@ -I$(OPENGL_INCLUD) -L$(OPENGL_LIBS) $(LINKLIBS)
 
 # phony rules
 .PHONY: all
